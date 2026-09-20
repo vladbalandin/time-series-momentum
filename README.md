@@ -1,122 +1,88 @@
-# Time-Series Momentum in the S&P 500
+# 12-Month Time-Series Momentum on the S&P 500
 
-An empirical study of time-series momentum in the S&P 500 Total Return Index using Python.
+Does a positive return over the past 12 months predict stronger future returns? Can a simple monthly timing rule improve the balance between return and risk?
 
-## Overview
+This project studies those questions using the S&P 500 Total Return Index and an implementation with SPY. **The momentum effect is not statistically significant after HAC correction. The strategy's most consistent historical benefit is lower risk; its return advantage varies over time.**
 
-This project investigates whether past market performance contains information about subsequent returns in the S&P 500.
-
-The main research question is:
-
-**If the S&P 500 has generated a positive return over the previous 12 months, are subsequent returns systematically higher?**
-
-The project is inspired by the time-series momentum literature, particularly Moskowitz, Ooi & Pedersen (2012), and combines statistical testing with a simple systematic trading strategy.
+Open the [research notebook](notebooks/01_momentum_research.ipynb) for the calculations and interactive Plotly charts.
 
 ## Data
 
-The analysis uses historical daily data for the **S&P 500 Total Return Index**, including reinvested dividends, covering approximately 1988–2026.
+| Input | Use | Snapshot |
+| --- | --- | --- |
+| S&P 500 Total Return Index (`^SP500TR`), downloaded with yfinance | Signal and statistical analysis, using `Close` | January 1988–July 2026 |
+| SPY, downloaded with yfinance | Tradable proxy, using `Adj Close` | January 1993–July 2026 |
+| `RF` from `F-F_Research_Data_Factors.csv` | Monthly cash returns and excess returns | File ending in July 2026 |
 
-Daily observations are converted to month-end frequency for the main analysis.
+Daily prices are resampled to the last observation each month. Removing unavailable returns leaves 450 one-month and 448 three-month observations. The SPY implementation has 402 monthly returns.
 
-Risk-free returns used in the backtest are obtained from the **Fama-French Research Data Factors** dataset.
+## Method and statistical results
 
-## Methodology
+The analysis compares forward returns after positive and nonpositive 12-month returns using descriptive statistics, a one-sided Welch test, regression diagnostics, and OLS with HAC (Newey–West) standard errors. Three-month forward returns overlap.
 
-The analysis includes:
+| Forward horizon | Difference in group means | HAC lags | Two-sided HAC p-value |
+| --- | ---: | ---: | ---: |
+| 1 month | +0.82 percentage points | 6 | 0.314 |
+| 3 months | +2.37 percentage points | 2 | 0.218 |
 
-- Data cleaning and conversion from daily to monthly observations
-- Construction of trailing 12-month momentum signals
-- Calculation of 1-month and 3-month forward returns
-- Conditional return comparisons after positive and non-positive momentum signals
-- Welch-style hypothesis testing
-- OLS regression analysis
-- HAC / Newey-West standard errors to account for heteroskedasticity and serial dependence
-- Systematic strategy backtesting
-- Risk-adjusted performance evaluation
-- Crisis-period analysis
-- Robustness checks across 6-, 9-, 12-, and 18-month lookback windows
+The Welch p-value is 0.136. Ordinary OLS gives a three-month p-value near 0.010, but significance disappears with HAC. The alternative HAC lag choices also give p-values above 0.05.
 
-## Main Findings
+## Trading rule and implementation
 
-The data show a positive relationship between past and subsequent market returns.
+- Hold the market when the index's 12-month total return is positive; otherwise hold cash. Rebalance monthly, with no short selling or leverage.
+- Apply each signal to the following month's return. The initial index backtest assumes zero cash returns; the next version includes monthly `RF`.
+- For SPY, keep the index signal and use SPY adjusted-close returns. Convert `RF` from percent to decimal and align it with the holding period.
+- Charge **0.16 bps per one-way entry or exit**, including initial entry, with no final liquidation charge. SPY buy and hold has no cost deduction.
+- Use month-end prices without a separate execution delay. Costs are fixed assumptions; individual execution frictions are not estimated separately.
 
-For the 3-month horizon, the average subsequent S&P 500 Total Return was approximately **2.36 percentage points higher** following a positive 12-month return than following a non-positive one.
+CAGR compounds returns; volatility is annualized with the square root of 12. Sharpe uses monthly excess returns. Drawdowns use monthly wealth peaks.
 
-A naive OLS regression suggests statistical significance. However, 3-month forward returns overlap, creating substantial serial correlation. After applying HAC / Newey-West standard errors, the coefficient is no longer statistically significant across reasonable lag specifications.
+## Robustness and stability over time
 
-This suggests that the sample contains a **momentum-like pattern**, but the statistical evidence is not strong enough to reject the null hypothesis once serial dependence is taken into account.
+The **6-, 9-, 12-, and 18-month** signals use a common index sample starting in July 1990. In this sample, the 12-month rule has the highest CAGR and Sharpe ratio among the four tested windows; all four have lower volatility and smaller drawdowns than buy and hold. This comparison is a sensitivity check, not a parameter optimization or out-of-sample test.
 
-## Strategy Backtest
+At costs of **0, 0.16, 1, and 5 bps**, strategy CAGR ranges from about **11.18% to 11.15%**. Low turnover—18 position changes plus initial entry—limits the effect of the tested costs.
 
-A simple monthly strategy is constructed using the momentum signal:
+The SPY sample is divided into three consecutive periods of 134 months, each evaluated from an initial wealth of 1:
 
-- **Positive momentum:** invested in the S&P 500 Total Return Index
-- **Non-positive momentum:** invested at the risk-free rate
+| Decision dates | Strategy CAGR | SPY CAGR | Strategy Sharpe | SPY Sharpe |
+| --- | ---: | ---: | ---: | ---: |
+| Jan 1993–Feb 2004 | 13.40% | 10.72% | 0.794 | 0.496 |
+| Mar 2004–Apr 2015 | 9.98% | 7.87% | 0.840 | 0.512 |
+| May 2015–Jun 2026 | 10.19% | 13.87% | 0.664 | 0.801 |
 
-The strategy is evaluated using:
+In the latest period, volatility is **12.86% versus 15.16%**, and maximum drawdown is **−19.45% versus −23.93%**. There are 10 signal changes versus four in each earlier period, with several brief exits consistent with more whipsaw.
 
-- Compound Annual Growth Rate (CAGR)
-- Annualized volatility
-- Sharpe ratio
-- Maximum drawdown
-- Cumulative wealth
+Dates refer to decisions; returns are realized the following month. The final June 2026 row includes July 2026's return.
 
-For the 12-month signal, the robustness-period backtest produced approximately:
+![Cumulative wealth](figures/cumulative_wealth.png)
 
-| Metric | Momentum Strategy | Benchmark |
-|---|---:|---:|
-| CAGR | 11.2% | 11.0% |
-| Annualized Volatility | 11.8% | 14.7% |
-| Sharpe Ratio | 0.74 | 0.61 |
-| Maximum Drawdown | -19.6% | -50.9% |
+[Drawdowns](figures/drawdowns.png) · [CAGR by subperiod](figures/cagr_by_subperiod.png)
 
-The strategy therefore achieved similar long-run growth while exhibiting substantially lower volatility and drawdown in this historical sample.
+## Limitations and conclusion
 
-These results should not be interpreted as evidence of a directly tradable strategy, since transaction costs and other implementation effects are not yet incorporated.
+The project covers one market, has no untouched out-of-sample period, and simplifies execution and cash returns. Monthly observations miss intramonth losses. Performance varies substantially over time.
 
-## Robustness
+The full SPY sample shows a small CAGR advantage and better risk measures, but the latest period has lower CAGR and Sharpe than SPY. **Lower risk is the more consistent historical benefit.** These findings do not establish future performance or a permanent change in market behavior.
 
-The momentum rule is also tested using alternative lookback periods:
+## Run the project
 
-- 6 months
-- 9 months
-- 12 months
-- 18 months
+Use Python 3.12. From the repository root:
 
-The 12-month specification produced the strongest overall risk-adjusted performance among the tested horizons, although the results vary across specifications.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m jupyter lab notebooks/01_momentum_research.ipynb
+```
 
-## Repository
+All three original CSV snapshots are included in `data/`. Restart the kernel and run all cells. The complete calculation was rerun from these fixed input files to confirm that the key results are reproducible. See the [data notes](data/README.md) for details on the input snapshots.
 
-The main analysis is contained in:
+| Path | Contents |
+| --- | --- |
+| `notebooks/01_momentum_research.ipynb` | Research, saved outputs, and three Plotly charts |
+| `data/` | Fixed input snapshots and input requirements |
+| `figures/` | Static previews of the same three charts |
+| `requirements.txt` | Python dependencies |
 
-`01_momentum_analysis.ipynb`
-
-The notebook contains the complete research workflow, including data preparation, statistical analysis, regression diagnostics, backtesting, risk metrics, and robustness checks.
-
-## Tools
-
-- Python
-- pandas
-- NumPy
-- SciPy
-- statsmodels
-- Jupyter Notebook
-
-## Limitations and Further Work
-
-Potential extensions include:
-
-- Transaction costs and turnover
-- Alternative signal definitions
-- Additional asset classes
-- Longer historical samples
-- Out-of-sample testing
-- More realistic portfolio implementation assumptions
-
-## References
-
-Moskowitz, T. J., Ooi, Y. H., & Pedersen, L. H. (2012).  
-*Time Series Momentum*. Journal of Financial Economics, 104(2), 228–250.
-
-Hurst, B., Ooi, Y. H., & Pedersen, L. H. (2017).  
-*A Century of Evidence on Trend-Following Investing*.
+Background reading recorded in the original notebook: Moskowitz, Ooi & Pedersen (2012), *Time Series Momentum*; *A Century of Evidence on Trend-Following Investing*. This project is not a replication of either study.

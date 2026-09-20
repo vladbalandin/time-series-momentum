@@ -1,0 +1,9 @@
+# Python 3.12. Numerical packages match the original notebook's saved environment.
+numpy==1.26.3
+pandas==2.1.4
+scipy==1.14.1
+statsmodels==0.14.4
+# Plotly rendering and the notebook interface used for the cleaned copy.
+plotly==6.3.0
+jupyterlab==4.4.3
+ipykernel==6.30.1
