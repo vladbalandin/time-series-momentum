@@ -10,9 +10,9 @@ Open the [research notebook](notebooks/01_momentum_research.ipynb) for the calcu
 
 | Input | Use | Snapshot |
 | --- | --- | --- |
-| S&P 500 Total Return Index (`^SP500TR`), downloaded with yfinance | Signal and statistical analysis, using `Close` | January 1988–July 2026 |
-| SPY, downloaded with yfinance | Tradable proxy, using `Adj Close` | January 1993–July 2026 |
-| `RF` from `F-F_Research_Data_Factors.csv` | Monthly cash returns and excess returns | File ending in July 2026 |
+| S&P 500 Total Return Index (`^SP500TR`), downloaded from [Yahoo Finance](https://finance.yahoo.com/quote/%5ESP500TR/history/) with yfinance | Signal and statistical analysis, using `Close` | January 1988–July 2026 |
+| SPY, downloaded from [Yahoo Finance](https://finance.yahoo.com/quote/SPY/history/) with yfinance | Tradable proxy, using `Adj Close` | January 1993–July 2026 |
+| `RF` from the [Kenneth R. French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) | Monthly cash returns and excess returns | File ending in July 2026 |
 
 Daily prices are resampled to the last observation each month. Removing unavailable returns leaves 450 one-month and 448 three-month observations. The SPY implementation has 402 monthly returns.
 
@@ -76,12 +76,12 @@ python -m pip install -r requirements.txt
 python -m jupyter lab notebooks/01_momentum_research.ipynb
 ```
 
-All three original CSV snapshots are included in `data/`. Restart the kernel and run all cells. The complete calculation was rerun from these fixed input files to confirm that the key results are reproducible. See the [data notes](data/README.md) for details on the input snapshots.
+The Fama/French factors file is included in `data/`. The two Yahoo Finance price snapshots are not redistributed in this public repository; the notebook expects them locally under the filenames documented in the [data notes](data/README.md). The saved notebook outputs show the results produced from the fixed snapshots used in the research. Fresh Yahoo Finance downloads may differ because of later data revisions.
 
 | Path | Contents |
 | --- | --- |
 | `notebooks/01_momentum_research.ipynb` | Research, saved outputs, and three Plotly charts |
-| `data/` | Fixed input snapshots and input requirements |
+| `data/` | Fama/French factors file and instructions for the local Yahoo Finance snapshots |
 | `figures/` | Static previews of the same three charts |
 | `requirements.txt` | Python dependencies |
 
